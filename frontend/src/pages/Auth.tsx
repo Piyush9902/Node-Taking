@@ -24,6 +24,7 @@ export default function AuthPage() {
   const [step, setStep] = useState<'send' | 'verify'>('send');
   const [loading, setLoading] = useState(false);
   const [serverMsg, setServerMsg] = useState<string | null>(null);
+  const [debugOtp, setDebugOtp] = useState<string | null>(null);
   const setAuth = useSetAtom(setAuthAtom);
 
   const {
@@ -42,9 +43,11 @@ export default function AuthPage() {
   async function onSend(values: z.infer<typeof sendSchema>) {
     setLoading(true);
     setServerMsg(null);
+    setDebugOtp(null);
     try {
       const { data } = await api.post('/auth/send-otp', values);
       setServerMsg(data.message || 'OTP sent');
+      if (data.debugOtp) setDebugOtp(String(data.debugOtp));
       setStep('verify');
     } catch (e) {
       setServerMsg(getErrorMessage(e));
@@ -89,12 +92,12 @@ export default function AuthPage() {
         <form onSubmit={handleSubmitSend(onSend)} className="card">
           <label>
             Name
-            <input type="text" {...registerSend('name')} placeholder="Your name" />
+            <input type="text" {...registerSend('name')} placeholder="Your name" autoComplete="name" />
             {errorsSend.name && <span>{errorsSend.name.message}</span>}
           </label>
           <label>
             Email
-            <input type="email" {...registerSend('email')} placeholder="you@example.com" />
+            <input type="email" {...registerSend('email')} placeholder="you@example.com" autoComplete="email" />
             {errorsSend.email && <span>{errorsSend.email.message}</span>}
           </label>
           <label>
@@ -110,9 +113,20 @@ export default function AuthPage() {
           )}
           className="card"
         >
+          {debugOtp && (
+            <div className="server-msg">Dev only: OTP is {debugOtp}</div>
+          )}
           <label>
             OTP Code
-            <input type="text" maxLength={6} {...registerVerify('code')} placeholder="6-digit code" />
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="one-time-code"
+              maxLength={6}
+              {...registerVerify('code')}
+              placeholder="6-digit code"
+            />
             {errorsVerify.code && <span>{errorsVerify.code.message}</span>}
           </label>
           <button disabled={loading} type="submit">{loading ? 'Verifying...' : 'Verify OTP'}</button>
